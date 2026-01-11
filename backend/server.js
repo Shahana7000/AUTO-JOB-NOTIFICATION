@@ -30,6 +30,10 @@ const io = new Server(server, {
     }
 });
 
+io.on('connection', (socket) => {
+    socket.emit('log', { message: '⚡ System Connected: Real-time logs active.', type: 'info', timestamp: new Date() });
+});
+
 app.use(cors());
 app.use(express.json());
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
@@ -169,6 +173,12 @@ app.post('/api/user/toggle-campaign', async (req, res) => {
             console.error(`Toggle failed: User ${email} not found`);
             return res.status(404).json({ error: 'User profiles not found for this email. Please save your profile first.' });
         }
+
+        // Trigger immediate search if starting
+        if (isActive) {
+            runJobSearchCampaign(io, email);
+        }
+
         res.json({ success: true, isActive: user.isActive });
     } catch (err) {
         console.error('Toggle Error:', err);

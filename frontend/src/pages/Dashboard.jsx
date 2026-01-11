@@ -11,19 +11,14 @@ const Dashboard = () => {
     const [jobs, setJobs] = useState([]);
     const [stats, setStats] = useState({ searched: 0, applied: 0 });
     const [logs, setLogs] = useState([]);
-    const [isActive, setIsActive] = useState(true);
-    const [userEmail, setUserEmail] = useState('');
+    const [profiles, setProfiles] = useState([]);
     const logEndRef = useRef(null);
 
-    const fetchProfile = async () => {
-        const storedEmail = localStorage.getItem('userEmail');
-        if (storedEmail) {
-            setUserEmail(storedEmail);
-            try {
-                const res = await axios.get(`${API_BASE_URL}/api/user/profile?email=${storedEmail}`);
-                if (res.data) setIsActive(res.data.isActive);
-            } catch (err) { console.error(err); }
-        }
+    const fetchAllProfiles = async () => {
+        try {
+            const res = await axios.get(`${API_BASE_URL}/api/users`);
+            setProfiles(res.data);
+        } catch (err) { console.error(err); }
     };
 
     const fetchJobs = async () => {
@@ -47,7 +42,7 @@ const Dashboard = () => {
     useEffect(() => {
         fetchJobs();
         fetchStats();
-        fetchProfile();
+        fetchAllProfiles();
 
         socket.on('newJob', (job) => {
             setJobs(prev => [job, ...prev]);
@@ -78,19 +73,14 @@ const Dashboard = () => {
         }
     };
 
-    const toggleCampaign = async () => {
-        if (!userEmail) {
-            alert('Please set up your profile first!');
-            return;
-        }
+    const toggleCampaign = async (email, currentStatus) => {
         try {
-            const newState = !isActive;
-            await axios.post(`${API_BASE_URL}/api/user/toggle-campaign`, { email: userEmail, isActive: newState });
-            setIsActive(newState);
+            const newState = !currentStatus;
+            await axios.post(`${API_BASE_URL}/api/user/toggle-campaign`, { email, isActive: newState });
+            setProfiles(prev => prev.map(p => p.email === email ? { ...p, isActive: newState } : p));
         } catch (err) {
             console.error(err);
-            const errorMsg = err.response?.data?.error || 'Could not update campaign status. Try again later.';
-            alert(errorMsg);
+            alert('Could not update campaign status.');
         }
     };
 
@@ -111,22 +101,67 @@ const Dashboard = () => {
                     <h3 style={{ fontSize: '1.5rem', fontWeight: '700' }}>{stats.applied}</h3>
                 </div>
                 <div className="glass-card">
-                    <p style={{ color: 'var(--text-muted)', fontSize: '0.875rem' }}>Campaign Control</p>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginTop: '4px' }}>
-                        <h3 style={{ fontSize: '1.25rem', fontWeight: '700', color: isActive ? '#10b981' : '#ef4444' }}>
-                            {isActive ? 'Running' : 'Paused'}
-                        </h3>
-                        <button
-                            onClick={toggleCampaign}
-                            className="btn-primary"
-                            style={{ padding: '4px 12px', background: isActive ? '#ef4444' : '#10b981', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.75rem' }}
-                        >
-                            {isActive ? <Square size={14} /> : <Play size={14} />}
-                            {isActive ? 'Stop' : 'Start'}
-                        </button>
-                    </div>
+                    <p style={{ color: 'var(--text-muted)', fontSize: '0.875rem' }}>Active Automations</p>
+                    <h3 style={{ fontSize: '1.5rem', fontWeight: '700' }}>{profiles.filter(p => p.isActive).length}</h3>
                 </div>
             </div>
+
+            <section style={{ marginBottom: '40px' }}>
+                <h2 style={{ fontSize: '1.5rem', fontWeight: '700', marginBottom: '20px' }}>Campaign Control Center</h2>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '20px' }}>
+                    {profiles.map(profile => (
+                        <div key={profile.email} className="glass-card" style={{ borderLeft: profile.isActive ? '4px solid #10b981' : '4px solid #ef4444' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '12px' }}>
+                                <div>
+                                    <h4 style={{ fontWeight: '700', fontSize: '1.1rem' }}>{profile.name}</h4>
+                                    <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>{profile.email}</p>
+                                </div>
+                                <span style={{
+                                    fontSize: '0.7rem',
+                                    padding: '2px 8px',
+                                    borderRadius: '10px',
+                                    background: profile.isActive ? 'rgba(16, 185, 129, 0.1)' : 'rgba(239, 68, 68, 0.1)',
+                                    color: profile.isActive ? '#10b981' : '#ef4444',
+                                    fontWeight: '600'
+                                }}>
+                                    {profile.isActive ? 'RUNNING' : 'PAUSED'}
+                                </span>
+                            </div>
+                            <div style={{ marginBottom: '16px' }}>
+                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
+                                    {profile.skills.slice(0, 3).map(skill => (
+                                        <span key={skill} style={{ fontSize: '0.7rem', padding: '1px 6px', background: 'rgba(255,255,255,0.05)', borderRadius: '4px' }}>
+                                            {skill}
+                                        </span>
+                                    ))}
+                                    {profile.skills.length > 3 && <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>+{profile.skills.length - 3} more</span>}
+                                </div>
+                            </div>
+                            <button
+                                onClick={() => toggleCampaign(profile.email, profile.isActive)}
+                                className="btn-primary"
+                                style={{
+                                    width: '100%',
+                                    background: profile.isActive ? '#ef4444' : '#10b981',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    gap: '8px',
+                                    fontSize: '0.875rem'
+                                }}
+                            >
+                                {profile.isActive ? <Square size={16} /> : <Play size={16} />}
+                                {profile.isActive ? 'Stop Automation' : 'Start Automation'}
+                            </button>
+                        </div>
+                    ))}
+                    {profiles.length === 0 && (
+                        <div className="glass-card" style={{ textAlign: 'center', padding: '40px', color: 'var(--text-muted)', gridColumn: '1 / -1' }}>
+                            No campaigns found. Go to Profile to create one!
+                        </div>
+                    )}
+                </div>
+            </section>
 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 350px', gap: '30px' }}>
                 <section style={{ flex: 1 }}>

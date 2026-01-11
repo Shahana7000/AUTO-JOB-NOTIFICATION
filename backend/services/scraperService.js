@@ -6,7 +6,10 @@ const { chromium } = require('playwright-chromium');
  */
 
 async function searchGoogleForTalent(keywords, location, site, io, minExperience) {
-    const browser = await chromium.launch({ headless: true });
+    const browser = await chromium.launch({
+        headless: true,
+        args: ['--no-sandbox', '--disable-setuid-sandbox']
+    });
     const context = await browser.newContext({
         userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36'
     });
@@ -77,14 +80,20 @@ async function searchGoogleForTalent(keywords, location, site, io, minExperience
 async function searchGlobalCandidates(keywords, location, io, minExperience) {
     if (io) io.emit('log', { message: `🚀 Initializing Resilient Web Discovery...`, type: 'info' });
 
-    // Try multi-platform search
-    const results = await Promise.all([
-        searchGoogleForTalent(keywords, location, 'linkedin.com/in/', io, minExperience),
-        searchGoogleForTalent(keywords, location, 'indeed.com/r/', io, minExperience),
-        searchGoogleForTalent(keywords, location, 'naukri.com/profile/', io, minExperience)
-    ]);
+    // Sequential search to save memory on free hosting tiers
+    const platforms = [
+        { name: 'LinkedIn', site: 'linkedin.com/in/' },
+        { name: 'Indeed', site: 'indeed.com/r/' },
+        { name: 'Naukri', site: 'naukri.com/profile/' }
+    ];
 
-    let all = results.flat();
+    let all = [];
+    for (const p of platforms) {
+        const results = await searchGoogleForTalent(keywords, location, p.site, io, minExperience);
+        all = [...all, ...results];
+        // Short pause between platform scans
+        await new Promise(r => setTimeout(r, 2000));
+    }
 
     // Fallback: If no results with strict skills, try a broader search without direct skill wrapping
     if (all.length === 0) {
@@ -144,33 +153,13 @@ async function scrapeIndeed(keywords, location) {
     } catch (e) { await browser.close(); return []; }
 }
 
-async function scrapeNaukri(keywords, location) {
-    const browser = await chromium.launch({ headless: true });
-    const page = await browser.newPage();
-    try {
-        const searchUrl = `https://www.naukri.com/${keywords.replace(/\s+/g, '-')}-jobs-in-${location.replace(/\s+/g, '-')}`;
-        await page.goto(searchUrl, { waitUntil: 'domcontentloaded', timeout: 60000 });
-        const jobs = await page.evaluate(() => {
-            const cards = Array.from(document.querySelectorAll('.jobTuple'));
-            return cards.map(card => ({
-                title: card.querySelector('.title')?.innerText.trim(),
-                company: card.querySelector('.subTitle')?.innerText.trim(),
-                location: card.querySelector('.location')?.innerText.trim(),
-                link: card.querySelector('.title')?.getAttribute('href'),
-                platform: 'Naukri'
-            })).filter(j => j.title);
-        });
-        await browser.close();
-        return jobs;
-    } catch (e) { await browser.close(); return []; }
-}
-
 async function searchAllPlatforms(keywords, location) {
-    const [linkedin, indeed, naukri] = await Promise.all([
-        scrapeLinkedIn(keywords, location),
-        scrapeIndeed(keywords, location),
-        scrapeNaukri(keywords, location)
-    ]);
+    const linkedin = await scrapeLinkedIn(keywords, location);
+    await new Promise(r => setTimeout(r, 1000));
+    const indeed = await scrapeIndeed(keywords, location);
+    await new Promise(r => setTimeout(r, 1000));
+    const naukri = await scrapeNaukri(keywords, location);
+
     return [...linkedin, ...indeed, ...naukri];
 }
 

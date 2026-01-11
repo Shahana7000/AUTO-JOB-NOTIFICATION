@@ -12,14 +12,23 @@ const initScheduler = (io) => {
     });
 };
 
-const runJobSearchCampaign = async (io) => {
+const runJobSearchCampaign = async (io, specificUserEmail = null) => {
     const sendLog = (message) => {
         console.log(message);
         io.emit('log', { message, timestamp: new Date() });
     };
 
     try {
-        const users = await User.find({ isActive: true });
+        let query = { isActive: true };
+        if (specificUserEmail) {
+            query.email = specificUserEmail;
+        }
+
+        const users = await User.find(query);
+        if (users.length === 0 && specificUserEmail) {
+            sendLog(`⚠️ No active campaign found for ${specificUserEmail}.`);
+            return;
+        }
         sendLog(`Found ${users.length} active campaigns to run.`);
 
         for (const user of users) {

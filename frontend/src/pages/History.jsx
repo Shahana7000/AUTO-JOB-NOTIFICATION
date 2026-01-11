@@ -6,10 +6,6 @@ import { API_BASE_URL } from '../config';
 const History = () => {
     const [applications, setApplications] = useState([]);
 
-    useEffect(() => {
-        fetchHistory();
-    }, []);
-
     const fetchHistory = async () => {
         try {
             const res = await axios.get(`${API_BASE_URL}/api/applications`);
@@ -18,6 +14,10 @@ const History = () => {
             console.error(err);
         }
     };
+
+    useEffect(() => {
+        fetchHistory();
+    }, []);
 
     const handleDelete = async (id) => {
         if (window.confirm('Are you sure you want to delete this history item?')) {

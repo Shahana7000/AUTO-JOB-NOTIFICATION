@@ -15,29 +15,6 @@ const Dashboard = () => {
     const [userEmail, setUserEmail] = useState('');
     const logEndRef = useRef(null);
 
-    useEffect(() => {
-        fetchJobs();
-        fetchStats();
-        fetchProfile();
-
-        socket.on('newJob', (job) => {
-            setJobs(prev => [job, ...prev]);
-        });
-
-        socket.on('log', (log) => {
-            setLogs(prev => [...prev.slice(-49), log]);
-        });
-
-        return () => {
-            socket.off('newJob');
-            socket.off('log');
-        };
-    }, []);
-
-    useEffect(() => {
-        logEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-    }, [logs]);
-
     const fetchProfile = async () => {
         const storedEmail = localStorage.getItem('userEmail');
         if (storedEmail) {
@@ -66,6 +43,29 @@ const Dashboard = () => {
             console.error(err);
         }
     };
+
+    useEffect(() => {
+        fetchJobs();
+        fetchStats();
+        fetchProfile();
+
+        socket.on('newJob', (job) => {
+            setJobs(prev => [job, ...prev]);
+        });
+
+        socket.on('log', (log) => {
+            setLogs(prev => [...prev.slice(-49), log]);
+        });
+
+        return () => {
+            socket.off('newJob');
+            socket.off('log');
+        };
+    }, []);
+
+    useEffect(() => {
+        logEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }, [logs]);
 
     const markApplied = async (jobId) => {
         try {

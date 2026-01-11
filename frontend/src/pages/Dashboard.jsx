@@ -3,8 +3,9 @@ import axios from 'axios';
 import { io } from 'socket.io-client';
 import { ExternalLink, CheckCircle, Clock, MapPin, Terminal, Play, Square } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { API_BASE_URL } from '../config';
 
-const socket = io('http://localhost:5000');
+const socket = io(API_BASE_URL);
 
 const Dashboard = () => {
     const [jobs, setJobs] = useState([]);
@@ -42,7 +43,7 @@ const Dashboard = () => {
         if (storedEmail) {
             setUserEmail(storedEmail);
             try {
-                const res = await axios.get(`http://localhost:5000/api/user/profile?email=${storedEmail}`);
+                const res = await axios.get(`${API_BASE_URL}/api/user/profile?email=${storedEmail}`);
                 if (res.data) setIsActive(res.data.isActive);
             } catch (err) { console.error(err); }
         }
@@ -50,7 +51,7 @@ const Dashboard = () => {
 
     const fetchJobs = async () => {
         try {
-            const res = await axios.get('http://localhost:5000/api/jobs');
+            const res = await axios.get(`${API_BASE_URL}/api/jobs`);
             setJobs(res.data);
         } catch (err) {
             console.error(err);
@@ -59,7 +60,7 @@ const Dashboard = () => {
 
     const fetchStats = async () => {
         try {
-            const res = await axios.get(`http://localhost:5000/api/applications?email=${localStorage.getItem('userEmail')}`);
+            const res = await axios.get(`${API_BASE_URL}/api/applications?email=${localStorage.getItem('userEmail')}`);
             setStats(prev => ({ ...prev, applied: res.data.length }));
         } catch (err) {
             console.error(err);
@@ -68,7 +69,7 @@ const Dashboard = () => {
 
     const markApplied = async (jobId) => {
         try {
-            await axios.post(`http://localhost:5000/api/jobs/apply/${jobId}`);
+            await axios.post(`${API_BASE_URL}/api/jobs/apply/${jobId}`);
             setJobs(prev => prev.filter(job => job._id !== jobId));
             fetchStats();
         } catch (err) {
@@ -84,7 +85,7 @@ const Dashboard = () => {
         }
         try {
             const newState = !isActive;
-            await axios.post('http://localhost:5000/api/user/toggle-campaign', { email: userEmail, isActive: newState });
+            await axios.post(`${API_BASE_URL}/api/user/toggle-campaign`, { email: userEmail, isActive: newState });
             setIsActive(newState);
         } catch (err) {
             console.error(err);

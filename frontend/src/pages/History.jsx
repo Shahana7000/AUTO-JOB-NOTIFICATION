@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { ExternalLink, Briefcase, Trash2 } from 'lucide-react';
+import { API_BASE_URL } from '../config';
 
 const History = () => {
     const [applications, setApplications] = useState([]);
@@ -11,7 +12,7 @@ const History = () => {
 
     const fetchHistory = async () => {
         try {
-            const res = await axios.get('http://localhost:5000/api/applications');
+            const res = await axios.get(`${API_BASE_URL}/api/applications`);
             setApplications(res.data);
         } catch (err) {
             console.error(err);
@@ -21,7 +22,7 @@ const History = () => {
     const handleDelete = async (id) => {
         if (window.confirm('Are you sure you want to delete this history item?')) {
             try {
-                await axios.delete(`http://localhost:5000/api/applications/${id}`);
+                await axios.delete(`${API_BASE_URL}/api/applications/${id}`);
                 setApplications(prev => prev.filter(app => app._id !== id));
             } catch (err) {
                 console.error(err);

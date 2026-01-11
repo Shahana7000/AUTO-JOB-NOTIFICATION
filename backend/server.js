@@ -6,6 +6,8 @@ const http = require('http');
 const { Server } = require('socket.io');
 const path = require('path');
 const multer = require('multer');
+const cloudinary = require('cloudinary').v2;
+const { CloudinaryStorage } = require('multer-storage-cloudinary');
 
 const { initScheduler, runJobSearchCampaign } = require('./services/schedulerService');
 const { parseResume } = require('./services/resumeParser');
@@ -37,10 +39,22 @@ if (!fs.existsSync('./uploads')) {
     fs.mkdirSync('./uploads');
 }
 
-// Multer storage for resumes
-const storage = multer.diskStorage({
-    destination: (req, file, cb) => cb(null, './uploads'),
-    filename: (req, file, cb) => cb(null, Date.now() + '-' + file.originalname)
+// Cloudinary configuration
+cloudinary.config({
+    cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+    api_key: process.env.CLOUDINARY_API_KEY,
+    api_secret: process.env.CLOUDINARY_API_SECRET
+});
+
+// Cloudinary storage for resumes
+const storage = new CloudinaryStorage({
+    cloudinary: cloudinary,
+    params: {
+        folder: 'resumes',
+        resource_type: 'auto',
+        allowed_formats: ['pdf', 'doc', 'docx'],
+        public_id: (req, file) => Date.now() + '-' + file.originalname.split('.')[0]
+    },
 });
 const upload = multer({ storage });
 
@@ -143,8 +157,7 @@ app.get('/api/recruiter/requirements/:id/matches', async (req, res) => {
 
 app.post('/api/upload', upload.single('resume'), (req, res) => {
     if (!req.file) return res.status(400).send('No file uploaded');
-    const url = `${req.protocol}://${req.get('host')}/uploads/${req.file.filename}`;
-    res.json({ url });
+    res.json({ url: req.file.path });
 });
 
 app.post('/api/user/toggle-campaign', async (req, res) => {

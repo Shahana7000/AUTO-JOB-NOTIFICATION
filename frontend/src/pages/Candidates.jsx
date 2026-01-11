@@ -2,8 +2,9 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { Search, MapPin, Briefcase, FileText, User, Filter, X, Save, Star, Trash2, Bell, ExternalLink, Linkedin, Globe, Zap } from 'lucide-react';
 import { io } from 'socket.io-client';
+import { API_BASE_URL } from '../config';
 
-const socket = io('http://localhost:5000');
+const socket = io(API_BASE_URL);
 
 const Candidates = () => {
     const [candidates, setCandidates] = useState([]);
@@ -38,7 +39,7 @@ const Candidates = () => {
 
     const fetchRequirements = async () => {
         try {
-            const res = await axios.get('http://localhost:5000/api/recruiter/requirements');
+            const res = await axios.get(`${API_BASE_URL}/api/recruiter/requirements`);
             setRequirements(res.data);
         } catch (err) {
             console.error(err);
@@ -50,8 +51,8 @@ const Candidates = () => {
         setActiveRequirement(null);
         try {
             const endpoint = searchMode === 'internal'
-                ? 'http://localhost:5000/api/recruiter/candidates'
-                : 'http://localhost:5000/api/recruiter/global-search';
+                ? `${API_BASE_URL}/api/recruiter/candidates`
+                : `${API_BASE_URL}/api/recruiter/global-search`;
 
             const res = await axios.get(endpoint, {
                 params: filters
@@ -75,7 +76,7 @@ const Candidates = () => {
             minExperience: req.minExperience || 0
         });
         try {
-            const res = await axios.get(`http://localhost:5000/api/recruiter/requirements/${req._id}/matches`);
+            const res = await axios.get(`${API_BASE_URL}/api/recruiter/requirements/${req._id}/matches`);
             setCandidates(res.data);
         } catch (err) {
             console.error(err);
@@ -89,7 +90,7 @@ const Candidates = () => {
         if (!title) return;
 
         try {
-            await axios.post('http://localhost:5000/api/recruiter/requirements', {
+            await axios.post(`${API_BASE_URL}/api/recruiter/requirements`, {
                 title,
                 skills: filters.skills ? filters.skills.split(',').map(s => s.trim()) : [],
                 location: filters.location,
@@ -109,7 +110,7 @@ const Candidates = () => {
         e.stopPropagation();
         if (!window.confirm('Delete campaign?')) return;
         try {
-            await axios.delete(`http://localhost:5000/api/recruiter/requirements/${id}`);
+            await axios.delete(`${API_BASE_URL}/api/recruiter/requirements/${id}`);
             fetchRequirements();
             if (activeRequirement?._id === id) {
                 setActiveRequirement(null);

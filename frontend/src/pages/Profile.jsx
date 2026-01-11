@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { Save, Plus, X, Upload, FileText, Edit2, Trash2, UserPlus } from 'lucide-react';
+import { API_BASE_URL } from '../config';
 
 const Profile = () => {
     const [profile, setProfile] = useState({
@@ -28,7 +29,7 @@ const Profile = () => {
 
     const fetchProfiles = async () => {
         try {
-            const res = await axios.get('http://localhost:5000/api/users');
+            const res = await axios.get(`${API_BASE_URL}/api/users`);
             setProfiles(res.data);
         } catch (err) {
             console.error(err);
@@ -67,7 +68,7 @@ const Profile = () => {
     const deleteProfile = async (email) => {
         if (window.confirm('Are you sure you want to delete this campaign?')) {
             try {
-                await axios.delete(`http://localhost:5000/api/users/${email}`);
+                await axios.delete(`${API_BASE_URL}/api/users/${email}`);
                 setProfiles(prev => prev.filter(p => p.email !== email));
                 if (profile.email === email) {
                     localStorage.removeItem('userEmail');
@@ -93,7 +94,7 @@ const Profile = () => {
         }
 
         try {
-            await axios.post('http://localhost:5000/api/user/profile', profile);
+            await axios.post(`${API_BASE_URL}/api/user/profile`, profile);
             localStorage.setItem('userEmail', profile.email);
             setMessage('Profile saved successfully!');
             fetchProfiles();
@@ -125,7 +126,7 @@ const Profile = () => {
 
         setUploading(true);
         try {
-            const res = await axios.post('http://localhost:5000/api/upload', formData, {
+            const res = await axios.post(`${API_BASE_URL}/api/upload`, formData, {
                 headers: { 'Content-Type': 'multipart/form-data' }
             });
             setProfile({ ...profile, resumeUrl: res.data.url });
